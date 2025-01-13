@@ -61,23 +61,52 @@ jobs:
             -Dsonar.language=ts \
             -Dsonar.branch.name=${{ github.ref_name }}
 
-      - name: Validate Quality Gate
+      - name: Validate Quality Gate and Count Vulnerabilities
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          echo "Validando el estado del Quality Gate..."
-          analysisId=$(curl -s -u "$SONAR_TOKEN:" "https://sonarcloud.io/api/ce/component?component=${{ github.event.repository.name }}" | jq -r '.current.analysisId')
+          echo "Validando el estado del Quality Gate y revisando vulnerabilidades..."
+          REPO_NAME="${{ github.event.repository.name }}"
+
+          # Obtener el ID del análisis más reciente
+          analysisId=$(curl -s -u "$SONAR_TOKEN:" "https://sonarcloud.io/api/ce/component?component=$REPO_NAME" | jq -r '.current.analysisId')
 
           if [ -z "$analysisId" ]; then
             echo "No se encontró un análisis reciente. Verifique la configuración."
             exit 1
           fi
 
+          # Validar el estado del Quality Gate
           qualityGateStatus=$(curl -s -u "$SONAR_TOKEN:" "https://sonarcloud.io/api/qualitygates/project_status?analysisId=$analysisId" | jq -r '.projectStatus.status')
 
+          echo "Estado del Quality Gate: $qualityGateStatus"
           if [ "$qualityGateStatus" != "OK" ]; then
             echo "El proyecto no cumple con el Quality Gate: $qualityGateStatus."
+          else
+            echo "El proyecto cumple con el Quality Gate."
+          fi
+
+          # Obtener el número de vulnerabilidades críticas, altas y medias
+          critical=$(curl -s -u "$SONAR_TOKEN:" "https://sonarcloud.io/api/issues/search?componentKeys=$REPO_NAME&types=VULNERABILITY&severities=CRITICAL" | jq -r '.total')
+          high=$(curl -s -u "$SONAR_TOKEN:" "https://sonarcloud.io/api/issues/search?componentKeys=$REPO_NAME&types=VULNERABILITY&severities=BLOCKER" | jq -r '.total')
+          medium=$(curl -s -u "$SONAR_TOKEN:" "https://sonarcloud.io/api/issues/search?componentKeys=$REPO_NAME&types=VULNERABILITY&severities=MAJOR" | jq -r '.total')
+
+          echo "Vulnerabilidades encontradas:"
+          echo "  Críticas: $critical"
+          echo "  Altas: $high"
+          echo "  Medias: $medium"
+
+          # Fallar el pipeline si hay vulnerabilidades críticas, altas o medias
+          if [ "$critical" -gt 0 ]; then
+            echo "Se encontraron $critical vulnerabilidades críticas. Falla el pipeline."
+            exit 1
+          elif [ "$high" -gt 0 ]; then
+            echo "Se encontraron $high vulnerabilidades altas. Falla el pipeline."
+            exit 1
+          elif [ "$medium" -gt 0 ]; then
+            echo "Se encontraron $medium vulnerabilidades medias. Falla el pipeline."
             exit 1
           else
-            echo "El proyecto cumple con el Quality Gate. Continuando sin problemas."
+            echo "No se encontraron vulnerabilidades críticas, altas o medias. Continuando con el pipeline."
           fi
+

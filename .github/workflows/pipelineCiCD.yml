@@ -80,33 +80,40 @@ jobs:
           qualityGateStatus=$(curl -s -u "$SONAR_TOKEN:" "https://sonarcloud.io/api/qualitygates/project_status?analysisId=$analysisId" | jq -r '.projectStatus.status')
 
           echo "Estado del Quality Gate: $qualityGateStatus"
+          # Verificar si el Quality Gate pasó o falló
           if [ "$qualityGateStatus" != "OK" ]; then
             echo "El proyecto no cumple con el Quality Gate: $qualityGateStatus."
+            
+            # Consultar vulnerabilidades y issues de Maintainability (CODE_SMELL)
+            critical=$(curl -s -u "$SONAR_TOKEN:" "https://sonarcloud.io/api/issues/search?componentKeys=$REPO_NAME&types=VULNERABILITY&severities=CRITICAL" | jq -r '.total')
+            high=$(curl -s -u "$SONAR_TOKEN:" "https://sonarcloud.io/api/issues/search?componentKeys=$REPO_NAME&types=VULNERABILITY&severities=HIGH" | jq -r '.total')
+            medium=$(curl -s -u "$SONAR_TOKEN:" "https://sonarcloud.io/api/issues/search?componentKeys=$REPO_NAME&types=VULNERABILITY&severities=MEDIUM" | jq -r '.total')
+            
+            maintainabilityCritical=$(curl -s -u "$SONAR_TOKEN:" "https://sonarcloud.io/api/issues/search?componentKeys=$REPO_NAME&types=CODE_SMELL&severities=CRITICAL" | jq -r '.total')
+            maintainabilityHigh=$(curl -s -u "$SONAR_TOKEN:" "https://sonarcloud.io/api/issues/search?componentKeys=$REPO_NAME&types=CODE_SMELL&severities=HIGH" | jq -r '.total')
+            maintainabilityMedium=$(curl -s -u "$SONAR_TOKEN:" "https://sonarcloud.io/api/issues/search?componentKeys=$REPO_NAME&types=CODE_SMELL&severities=MEDIUM" | jq -r '.total')
+
+            # Si hay vulnerabilidades críticas, altas o medias, falla el pipeline
+            if [ "$critical" -gt 0 ]; then
+              echo "Se encontraron $critical vulnerabilidades críticas. Falla el pipeline."
+              exit 1
+            elif [ "$high" -gt 0 ]; then
+              echo "Se encontraron $high vulnerabilidades altas. Falla el pipeline."
+              exit 1
+            elif [ "$medium" -gt 0 ]; then
+              echo "Se encontraron $medium vulnerabilidades medias. Falla el pipeline."
+              exit 1
+            # Si hay problemas de maintainability críticos, altos o medios, falla el pipeline
+            elif [ "$maintainabilityCritical" -gt 0 ]; then
+              echo "Se encontraron $maintainabilityCritical problemas críticos de mantenibilidad. Falla el pipeline."
+              exit 1
+            elif [ "$maintainabilityHigh" -gt 0 ]; then
+              echo "Se encontraron $maintainabilityHigh problemas altos de mantenibilidad. Falla el pipeline."
+              exit 1
+            elif [ "$maintainabilityMedium" -gt 0 ]; then
+              echo "Se encontraron $maintainabilityMedium problemas medios de mantenibilidad. Falla el pipeline."
+              exit 1
+            fi
           else
             echo "El proyecto cumple con el Quality Gate."
           fi
-
-          # Obtener el número de vulnerabilidades críticas, altas y medias
-          critical=$(curl -s -u "$SONAR_TOKEN:" "https://sonarcloud.io/api/issues/search?componentKeys=$REPO_NAME&types=VULNERABILITY&severities=CRITICAL" | jq -r '.total')
-          high=$(curl -s -u "$SONAR_TOKEN:" "https://sonarcloud.io/api/issues/search?componentKeys=$REPO_NAME&types=VULNERABILITY&severities=BLOCKER" | jq -r '.total')
-          medium=$(curl -s -u "$SONAR_TOKEN:" "https://sonarcloud.io/api/issues/search?componentKeys=$REPO_NAME&types=VULNERABILITY&severities=MAJOR" | jq -r '.total')
-
-          echo "Vulnerabilidades encontradas:"
-          echo "  Críticas: $critical"
-          echo "  Altas: $high"
-          echo "  Medias: $medium"
-
-          # Fallar el pipeline si hay vulnerabilidades críticas, altas o medias
-          if [ "$critical" -gt 0 ]; then
-            echo "Se encontraron $critical vulnerabilidades críticas. Falla el pipeline."
-            exit 1
-          elif [ "$high" -gt 0 ]; then
-            echo "Se encontraron $high vulnerabilidades altas. Falla el pipeline."
-            exit 1
-          elif [ "$medium" -gt 0 ]; then
-            echo "Se encontraron $medium vulnerabilidades medias. Falla el pipeline."
-            exit 1
-          else
-            echo "No se encontraron vulnerabilidades críticas, altas o medias. Continuando con el pipeline."
-          fi
-

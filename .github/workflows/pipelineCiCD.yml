@@ -61,11 +61,11 @@ jobs:
             -Dsonar.language=ts \
             -Dsonar.branch.name=${{ github.ref_name }}
 
-      - name: Validate Quality Gate and Count Vulnerabilities
+      - name: Validate Quality Gate and Count All Issues
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          echo "Validando el estado del Quality Gate y revisando vulnerabilidades..."
+          echo "Validando el estado del Quality Gate y revisando problemas de todo tipo..."
           REPO_NAME="${{ github.event.repository.name }}"
 
           # Obtener el ID del análisis más reciente
@@ -83,35 +83,17 @@ jobs:
           # Verificar si el Quality Gate pasó o falló
           if [ "$qualityGateStatus" != "OK" ]; then
             echo "El proyecto no cumple con el Quality Gate: $qualityGateStatus."
-            
-            # Consultar vulnerabilidades y issues de Maintainability (CODE_SMELL)
-            critical=$(curl -s -u "$SONAR_TOKEN:" "https://sonarcloud.io/api/issues/search?componentKeys=$REPO_NAME&types=VULNERABILITY&severities=CRITICAL" | jq -r '.total')
-            high=$(curl -s -u "$SONAR_TOKEN:" "https://sonarcloud.io/api/issues/search?componentKeys=$REPO_NAME&types=VULNERABILITY&severities=HIGH" | jq -r '.total')
-            medium=$(curl -s -u "$SONAR_TOKEN:" "https://sonarcloud.io/api/issues/search?componentKeys=$REPO_NAME&types=VULNERABILITY&severities=MEDIUM" | jq -r '.total')
-            
-            maintainabilityCritical=$(curl -s -u "$SONAR_TOKEN:" "https://sonarcloud.io/api/issues/search?componentKeys=$REPO_NAME&types=CODE_SMELL&severities=CRITICAL" | jq -r '.total')
-            maintainabilityHigh=$(curl -s -u "$SONAR_TOKEN:" "https://sonarcloud.io/api/issues/search?componentKeys=$REPO_NAME&types=CODE_SMELL&severities=HIGH" | jq -r '.total')
-            maintainabilityMedium=$(curl -s -u "$SONAR_TOKEN:" "https://sonarcloud.io/api/issues/search?componentKeys=$REPO_NAME&types=CODE_SMELL&severities=MEDIUM" | jq -r '.total')
 
-            # Si hay vulnerabilidades críticas, altas o medias, falla el pipeline
-            if [ "$critical" -gt 0 ]; then
-              echo "Se encontraron $critical vulnerabilidades críticas. Falla el pipeline."
-              exit 1
-            elif [ "$high" -gt 0 ]; then
-              echo "Se encontraron $high vulnerabilidades altas. Falla el pipeline."
-              exit 1
-            elif [ "$medium" -gt 0 ]; then
-              echo "Se encontraron $medium vulnerabilidades medias. Falla el pipeline."
-              exit 1
-            # Si hay problemas de maintainability críticos, altos o medios, falla el pipeline
-            elif [ "$maintainabilityCritical" -gt 0 ]; then
-              echo "Se encontraron $maintainabilityCritical problemas críticos de mantenibilidad. Falla el pipeline."
-              exit 1
-            elif [ "$maintainabilityHigh" -gt 0 ]; then
-              echo "Se encontraron $maintainabilityHigh problemas altos de mantenibilidad. Falla el pipeline."
-              exit 1
-            elif [ "$maintainabilityMedium" -gt 0 ]; then
-              echo "Se encontraron $maintainabilityMedium problemas medios de mantenibilidad. Falla el pipeline."
+            # Obtener todos los problemas del proyecto, sin importar su tipo o severidad
+            allIssues=$(curl -s -u "$SONAR_TOKEN:" "https://sonarcloud.io/api/issues/search?componentKeys=$REPO_NAME" | jq -r '.total')
+
+            # Mostrar el número total de problemas
+            echo "Problemas encontrados en el proyecto:"
+            echo "  Total de problemas: $allIssues"
+            
+            # Si hay problemas de cualquier tipo, falla el pipeline
+            if [ "$allIssues" -gt 0 ]; then
+              echo "Se encontraron $allIssues problemas en el proyecto. Falla el pipeline."
               exit 1
             fi
           else

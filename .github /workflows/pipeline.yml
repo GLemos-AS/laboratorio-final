@@ -1,0 +1,15 @@
+name: SonarCloud analysis
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  Analysis:
+    runs-on: ubuntu-latest
+
+    steps:
+          
+      - name: Hola mundo
+        run: |
+          echo "hola mundo"

@@ -70,3 +70,70 @@ jobs:
           else
             echo "No se encontraron vulnerabilidades críticas, altas o medias."
           fi
+  SCA:
+    needs: SAST
+    name: Software Composition Analysis (SCA)
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Instalar Java
+        run: |
+          sudo apt update
+          sudo apt install -y openjdk-11-jdk
+          java -version
+
+      - name: OWASP Dependency Check
+        run: |
+          curl -L https://github.com/jeremylong/DependencyCheck/releases/download/v11.1.1/dependency-check-11.1.1-release.zip -o dependency-check.zip
+          unzip dependency-check.zip -d $HOME/dependency-check
+
+      - name: Debug Dependency Check
+        run: ls -l $HOME/dependency-check/dependency-check/bin
+
+      - name: Make dependency-check.sh executable
+        run: chmod +x $HOME/dependency-check/dependency-check/bin/dependency-check.sh
+
+      - name: Run Dependency Check
+        run: |
+          $HOME/dependency-check/dependency-check/bin/dependency-check.sh \
+            --project "GLemos-AS_laboratorio-final-glemos2" \
+            --scan . \
+            --out ./dependency-check-report \
+            --format "ALL"
+      
+      - name: Contar vulnerabilidades por severidad
+        run: |
+          echo "Analizando el reporte de dependencias para contar vulnerabilidades..."
+
+          # Se utiliza el reporte generado para contar las vulnerabilidades por severidad
+          critical_count=$(grep -i 'Critical' ./dependency-check-report/*.html | wc -l)
+          high_count=$(grep -i 'High' ./dependency-check-report/*.html | wc -l)
+          medium_count=$(grep -i 'Medium' ./dependency-check-report/*.html | wc -l)
+
+          echo "Vulnerabilidades críticas: $critical_count"
+          echo "Vulnerabilidades altas: $high_count"
+          echo "Vulnerabilidades medias: $medium_count"
+
+          # Verificar si se deben fallar las vulnerabilidades según los umbrales
+          if [ "$critical_count" -gt 0 ]; then
+            echo "Se encontraron vulnerabilidades críticas. Deteniendo pipeline."
+            exit 1
+          elif [ "$high_count" -gt 0 ]; then
+            echo "Se encontraron vulnerabilidades altas. Deteniendo pipeline."
+            exit 1
+          elif [ "$medium_count" -gt 0 ]; then
+            echo "Se encontraron vulnerabilidades medias. Deteniendo pipeline."
+            exit 1
+          else
+            echo "No se encontraron vulnerabilidades críticas, altas o medias."
+          fi
+      
+      - name: Subir reporte
+        uses: actions/upload-artifact@v3
+        with:
+          name: dependency-check-report
+          path: ./dependency-check-report/*.html
+

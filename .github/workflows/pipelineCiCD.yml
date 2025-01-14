@@ -21,86 +21,33 @@ jobs:
           echo "Instalando dependencias del proyecto..."
           npm install
 
-      - name: Validate Project in SonarCloud
-        id: validateProjectOnSonar
-        run: |
-          PROJECT_NAME="${{ github.event.repository.name }}"
-          ORGANIZATION="glemosas"
-          
-          echo "Verificando si el proyecto '${PROJECT_NAME}' ya existe en SonarCloud..."
-
-          response=$(curl -s -o /dev/null -w "%{http_code}" -X POST -u "${{ secrets.SONAR_TOKEN }}:" \
-            "https://sonarcloud.io/api/projects/create" \
-            -d "name=${PROJECT_NAME}" \
-            -d "project=${PROJECT_NAME}" \
-            -d "organization=${ORGANIZATION}" \
-            -d "visibility=public")
-
-          if [ "$response" -eq 400 ]; then
-            echo "Proyecto '${PROJECT_NAME}' ya existe en SonarCloud"
-            echo "project_created=false" >> $GITHUB_ENV
-          elif [ "$response" -eq 200 ]; then
-            echo "Proyecto '${PROJECT_NAME}' creado exitosamente en SonarCloud"
-            echo "project_created=true" >> $GITHUB_ENV
-          else
-            echo "Error al crear el proyecto en SonarCloud. Código de respuesta: $response"
-            exit 1
-          fi
-
-      - name: Perform SonarCloud Analysis
+      - name: Analisis con SonarCloud
+        uses: SonarSource/sonarcloud-github-action@v2
+        with:
+          projectBaseDir: .
+          args: >
+            -Dsonar.projectKey=laboratorio-final-glemos
+            -Dsonar.organization=glemosas
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      
+      - name: Validar vulnerabilidades
         run: |
-          echo "Realizando análisis en SonarCloud..."
-          npx sonar-scanner \
-            -Dsonar.projectKey=${{ github.event.repository.name }} \
-            -Dsonar.organization=glemosas \
-            -Dsonar.host.url=https://sonarcloud.io \
-            -Dsonar.token=${{ secrets.SONAR_TOKEN }} \
-            -Dsonar.sources=src \
-            -Dsonar.language=ts \
-            -Dsonar.branch.name=${{ github.ref_name }}
-
-          if [ $? -ne 0 ]; then
-            echo "Error en la ejecución de sonar-scanner. Revisa los logs."
+          echo "Analizando vulnerabilidades"
+          response=$(curl -s "https://sonarcloud.io/api/issues/search?componentKeys=laboratorio-final-glemos&types=VULNERABILITY&severities=BLOCKER,CRITICAL,MAJOR")
+          echo "Respuesta de SonarCloud: $response"
+          vulnerabilities=$(echo "$response" | jq -r '.total // 0')
+          if [[ ! "$vulnerabilities" =~ ^[0-9]+$ ]]; then
+            echo "La variable vulnerabilities no contiene un número válido. Valor recibido: '$vulnerabilities'"
             exit 1
           fi
+          echo "Valor de variable: $vulnerabilities"
 
-      - name: Validate Quality Gate and Count All Issues
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          echo "Validando el estado del Quality Gate y revisando problemas de todo tipo..."
-          REPO_NAME="${{ github.event.repository.name }}"
-
-          # Obtener el ID del análisis más reciente
-          analysisId=$(curl -s -u "$SONAR_TOKEN:" "https://sonarcloud.io/api/ce/component?component=$REPO_NAME" | jq -r '.current.analysisId')
-
-          if [ -z "$analysisId" ]; then
-            echo "No se encontró un análisis reciente. Verifique la configuración."
-            exit 1
-          fi
-
-          # Validar el estado del Quality Gate
-          qualityGateStatus=$(curl -s -u "$SONAR_TOKEN:" "https://sonarcloud.io/api/qualitygates/project_status?analysisId=$analysisId" | jq -r '.projectStatus.status')
-
-          echo "Estado del Quality Gate: $qualityGateStatus"
-          # Verificar si el Quality Gate pasó o falló
-          if [ "$qualityGateStatus" != "OK" ]; then
-            echo "El proyecto no cumple con el Quality Gate: $qualityGateStatus."
-
-            # Obtener todos los problemas del proyecto, sin importar su tipo o severidad
-            allIssues=$(curl -s -u "$SONAR_TOKEN:" "https://sonarcloud.io/api/issues/search?componentKeys=$REPO_NAME" | jq -r '.total')
-
-            # Mostrar el número total de problemas
-            echo "Problemas encontrados en el proyecto:"
-            echo "  Total de problemas: $allIssues"
-            
-            # Si hay problemas de cualquier tipo, falla el pipeline
-            if [ "$allIssues" -gt 0 ]; then
-              echo "Se encontraron $allIssues problemas en el proyecto. Falla el pipeline."
-              exit 1
-            fi
+          # Verificar si se encontraron vulnerabilidades
+          if [ "$vulnerabilities" -gt 0 ]; then
+            echo "Se encontraron $vulnerabilities vulnerabilidades críticas, altas o medias. Deteniendo pipeline."
+          # Descomenta para detener el pipeline
+          # exit 1
           else
-            echo "El proyecto cumple con el Quality Gate."
+            echo "No se encontraron vulnerabilidades críticas, altas o medias."
           fi

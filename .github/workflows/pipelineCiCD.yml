@@ -87,10 +87,6 @@ jobs:
           java-version: '17'
           distribution: 'adopt'
 
-      # Construir el proyecto con Maven
-      - name: Build project with Maven
-        run: mvn clean install
-
       # Configurar Node.js
       - name: Set up Node.js
         uses: actions/setup-node@v3

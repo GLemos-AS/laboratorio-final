@@ -88,12 +88,12 @@ jobs:
       - name: Contar vulnerabilidades por severidad
         run: |
           echo "Analizando el reporte de dependencias para contar vulnerabilidades..."
+          REPORT_PATH="./reports/dependency-check-report.html"
 
-          # Contar vulnerabilidades usando el reporte generado
-          if [ -f ./dependency-check-report/dependency-check-report.html ]; then
-            critical_count=$(grep -i 'Critical' ./dependency-check-report/dependency-check-report.html | wc -l)
-            high_count=$(grep -i 'High' ./dependency-check-report/dependency-check-report.html | wc -l)
-            medium_count=$(grep -i 'Medium' ./dependency-check-report/dependency-check-report.html | wc -l)
+          if [ -f "$REPORT_PATH" ]; then
+            critical_count=$(grep -i 'Critical' "$REPORT_PATH" | wc -l)
+            high_count=$(grep -i 'High' "$REPORT_PATH" | wc -l)
+            medium_count=$(grep -i 'Medium' "$REPORT_PATH" | wc -l)
 
             echo "Vulnerabilidades críticas: $critical_count"
             echo "Vulnerabilidades altas: $high_count"
@@ -112,7 +112,6 @@ jobs:
               echo "No se encontraron vulnerabilidades críticas, altas o medias."
             fi
           else
-            echo "No se encontró el reporte de dependencias. Revisar ejecución."
+            echo "No se encontró el reporte de dependencias en $REPORT_PATH. Revisar ejecución."
             exit 1
           fi
-

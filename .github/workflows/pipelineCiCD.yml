@@ -26,7 +26,7 @@ jobs:
         with:
           projectBaseDir: .
           args: >
-            -Dsonar.projectKey=laboratorio-final-glemos
+            -Dsonar.projectKey=GLemos-AS_laboratorio-final-glemos2
             -Dsonar.organization=glemosas
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -34,7 +34,7 @@ jobs:
       - name: Validar vulnerabilidades
         run: |
           echo "Analizando vulnerabilidades"
-          response=$(curl -s "https://sonarcloud.io/api/issues/search?componentKeys=laboratorio-final-glemos&types=VULNERABILITY&severities=BLOCKER,CRITICAL,MAJOR")
+          response=$(curl -s "https://sonarcloud.io/api/issues/search?componentKeys=GLemos-AS_laboratorio-final-glemos2&types=VULNERABILITY&severities=BLOCKER,CRITICAL,MAJOR")
           echo "Respuesta de SonarCloud: $response"
           vulnerabilities=$(echo "$response" | jq -r '.total // 0')
           if [[ ! "$vulnerabilities" =~ ^[0-9]+$ ]]; then
@@ -47,7 +47,7 @@ jobs:
           if [ "$vulnerabilities" -gt 0 ]; then
             echo "Se encontraron $vulnerabilities vulnerabilidades críticas, altas o medias. Deteniendo pipeline."
           # Descomenta para detener el pipeline
-          # exit 1
+          exit 1
           else
             echo "No se encontraron vulnerabilidades críticas, altas o medias."
           fi

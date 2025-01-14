@@ -84,6 +84,10 @@ jobs:
         with:
           java-version: '17'
           distribution: 'adopt'
+      - name: Install Dependencies
+        run: |
+          echo "Instalando dependencias del proyecto con npm..."
+          npm install
 
       - name: Dependency Check
         uses: dependency-check/Dependency-Check_Action@1.1.0

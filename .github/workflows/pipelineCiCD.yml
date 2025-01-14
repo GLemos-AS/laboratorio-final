@@ -5,73 +5,36 @@ on:
   workflow_dispatch:
 
 jobs:
-  SAST:
-    name: Static Application Security Testing (SAST) con SonarCloud
-    runs-on: ubuntu-24.04
+  # Comentado el trabajo de SAST para testear solamente el SCA
+  # SAST:
+  #   name: Static Application Security Testing (SAST) con SonarCloud
+  #   runs-on: ubuntu-24.04
 
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
+  #   steps:
+  #     - name: Checkout Code
+  #       uses: actions/checkout@v3
 
-      - name: Set Environment Variables
-        run: echo "BRANCH_NAME=${{ github.ref_name }}" >> $GITHUB_ENV
+  #     - name: Set Environment Variables
+  #       run: echo "BRANCH_NAME=${{ github.ref_name }}" >> $GITHUB_ENV
 
-      - name: Install Dependencies
-        run: |
-          echo "Instalando dependencias del proyecto..."
-          npm install
+  #     - name: Install Dependencies
+  #       run: |
+  #         echo "Instalando dependencias del proyecto..."
+  #         npm install
 
-      - name: Analisis con SonarCloud
-        uses: SonarSource/sonarcloud-github-action@v2
-        with:
-          projectBaseDir: .
-          args: >
-            -Dsonar.projectKey=GLemos-AS_laboratorio-final-glemos2
-            -Dsonar.organization=glemosas
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      
-      - name: Validar vulnerabilidades
-        run: |
-          echo "Analizando vulnerabilidades"
-          
-          # Guardamos componentKeys en una variable
-          COMPONENT_KEY="GLemos-AS_laboratorio-final-glemos2"
-          
-          # Realizamos la consulta para obtener las vulnerabilidades CRITICAL
-          response_critical=$(curl -s "https://sonarcloud.io/api/issues/search?componentKeys=$COMPONENT_KEY&types=VULNERABILITY&severities=CRITICAL")
-          critical_vulnerabilities=$(echo "$response_critical" | jq -r '.total // 0')
+  #     - name: Analisis con SonarCloud
+  #       uses: SonarSource/sonarcloud-github-action@v2
+  #       with:
+  #         projectBaseDir: .
+  #         args: >
+  #           -Dsonar.projectKey=GLemos-AS_laboratorio-final-glemos2
+  #           -Dsonar.organization=glemosas
+  #       env:
+  #         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
-          # Realizamos la consulta para obtener las vulnerabilidades HIGH (altas)
-          response_high=$(curl -s "https://sonarcloud.io/api/issues/search?componentKeys=$COMPONENT_KEY&types=VULNERABILITY&severities=HIGH")
-          high_vulnerabilities=$(echo "$response_high" | jq -r '.total // 0')
-
-          # Realizamos la consulta para obtener las vulnerabilidades MAJOR (medias)
-          response_major=$(curl -s "https://sonarcloud.io/api/issues/search?componentKeys=$COMPONENT_KEY&types=VULNERABILITY&severities=MAJOR")
-          major_vulnerabilities=$(echo "$response_major" | jq -r '.total // 0')
-
-          # Verificar si las variables contienen números válidos
-          if [[ ! "$critical_vulnerabilities" =~ ^[0-9]+$ ]] || [[ ! "$high_vulnerabilities" =~ ^[0-9]+$ ]] || [[ ! "$major_vulnerabilities" =~ ^[0-9]+$ ]]; then
-            echo "Al menos una de las variables no contiene un número válido. Valor crítico: '$critical_vulnerabilities', Valor alto: '$high_vulnerabilities', Valor medio: '$major_vulnerabilities'"
-            exit 1
-          fi
-
-          # Mostrar el número de vulnerabilidades de cada tipo
-          echo "Vulnerabilidades críticas: $critical_vulnerabilities"
-          echo "Vulnerabilidades altas: $high_vulnerabilities"
-          echo "Vulnerabilidades medias: $major_vulnerabilities"
-
-          # Verificar si se encontraron vulnerabilidades de cualquier tipo
-          if [ "$critical_vulnerabilities" -gt 0 ] || [ "$high_vulnerabilities" -gt 0 ] || [ "$major_vulnerabilities" -gt 0 ]; then
-            echo "Se encontraron vulnerabilidades críticas, altas o medias. Deteniendo pipeline."
-
-            # Detener el pipeline si se encuentran vulnerabilidades de cualquier tipo
-            # exit 1
-          else
-            echo "No se encontraron vulnerabilidades críticas, altas o medias."
-          fi
   SCA:
-    needs: SAST
+    # Eliminamos la dependencia de SAST
+    # needs: SAST
     name: Software Composition Analysis (SCA)
     runs-on: ubuntu-latest
 
@@ -110,7 +73,7 @@ jobs:
           path: '.'
           format: 'HTML'
           args: >
-            --out ./dependency-check-report
+            --out ./reports
             --failOnCVSS 7
             --enableRetired
 
@@ -119,7 +82,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: dependency-check-report
-          path: ./dependency-check-report/*.html
+          path: ./reports
 
       # Contar vulnerabilidades
       - name: Contar vulnerabilidades por severidad

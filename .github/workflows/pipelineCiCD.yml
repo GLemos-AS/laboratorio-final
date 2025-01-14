@@ -1,11 +1,8 @@
-name: Laboratorio Final
-
 on:
   push:
   workflow_dispatch:
 
 jobs:
-  # Comentado el trabajo de SAST para testear solamente el SCA
   # SAST:
   #   name: Static Application Security Testing (SAST) con SonarCloud
   #   runs-on: ubuntu-24.04
@@ -31,12 +28,51 @@ jobs:
   #           -Dsonar.organization=glemosas
   #       env:
   #         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      
+  #     - name: Validar vulnerabilidades
+  #       run: |
+  #         echo "Analizando vulnerabilidades"
+          
+  #         # Guardamos componentKeys en una variable
+  #         COMPONENT_KEY="GLemos-AS_laboratorio-final-glemos2"
+          
+  #         # Realizamos la consulta para obtener las vulnerabilidades CRITICAL
+  #         response_critical=$(curl -s "https://sonarcloud.io/api/issues/search?componentKeys=$COMPONENT_KEY&types=VULNERABILITY&severities=CRITICAL")
+  #         critical_vulnerabilities=$(echo "$response_critical" | jq -r '.total // 0')
 
+  #         # Realizamos la consulta para obtener las vulnerabilidades HIGH (altas)
+  #         response_high=$(curl -s "https://sonarcloud.io/api/issues/search?componentKeys=$COMPONENT_KEY&types=VULNERABILITY&severities=HIGH")
+  #         high_vulnerabilities=$(echo "$response_high" | jq -r '.total // 0')
+
+  #         # Realizamos la consulta para obtener las vulnerabilidades MAJOR (medias)
+  #         response_major=$(curl -s "https://sonarcloud.io/api/issues/search?componentKeys=$COMPONENT_KEY&types=VULNERABILITY&severities=MAJOR")
+  #         major_vulnerabilities=$(echo "$response_major" | jq -r '.total // 0')
+
+  #         # Verificar si las variables contienen números válidos
+  #         if [[ ! "$critical_vulnerabilities" =~ ^[0-9]+$ ]] || [[ ! "$high_vulnerabilities" =~ ^[0-9]+$ ]] || [[ ! "$major_vulnerabilities" =~ ^[0-9]+$ ]]; then
+  #           echo "Al menos una de las variables no contiene un número válido. Valor crítico: '$critical_vulnerabilities', Valor alto: '$high_vulnerabilities', Valor medio: '$major_vulnerabilities'"
+  #           exit 1
+  #         fi
+
+  #         # Mostrar el número de vulnerabilidades de cada tipo
+  #         echo "Vulnerabilidades críticas: $critical_vulnerabilities"
+  #         echo "Vulnerabilidades altas: $high_vulnerabilities"
+  #         echo "Vulnerabilidades medias: $major_vulnerabilities"
+
+  #         # Verificar si se encontraron vulnerabilidades de cualquier tipo
+  #         if [ "$critical_vulnerabilities" -gt 0 ] || [ "$high_vulnerabilities" -gt 0 ] || [ "$major_vulnerabilities" -gt 0 ]; then
+  #           echo "Se encontraron vulnerabilidades críticas, altas o medias. Deteniendo pipeline."
+
+  #           # Detener el pipeline si se encuentran vulnerabilidades de cualquier tipo
+  #           # exit 1
+  #         else
+  #           echo "No se encontraron vulnerabilidades críticas, altas o medias."
+  #         fi
   SCA:
     # Eliminamos la dependencia de SAST
     # needs: SAST
     name: Software Composition Analysis (SCA)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       # Verificar y descargar código

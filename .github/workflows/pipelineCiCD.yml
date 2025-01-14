@@ -61,6 +61,11 @@ jobs:
             -Dsonar.language=ts \
             -Dsonar.branch.name=${{ github.ref_name }}
 
+          if [ $? -ne 0 ]; then
+            echo "Error en la ejecución de sonar-scanner. Revisa los logs."
+            exit 1
+          fi
+
       - name: Validate Quality Gate and Count All Issues
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -99,5 +104,3 @@ jobs:
           else
             echo "El proyecto cumple con el Quality Gate."
           fi
-
-          

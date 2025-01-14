@@ -34,20 +34,39 @@ jobs:
       - name: Validar vulnerabilidades
         run: |
           echo "Analizando vulnerabilidades"
-          response=$(curl -s "https://sonarcloud.io/api/issues/search?componentKeys=GLemos-AS_laboratorio-final-glemos2&types=VULNERABILITY&severities=BLOCKER,CRITICAL,MAJOR")
-          echo "Respuesta de SonarCloud: $response"
-          vulnerabilities=$(echo "$response" | jq -r '.total // 0')
-          if [[ ! "$vulnerabilities" =~ ^[0-9]+$ ]]; then
-            echo "La variable vulnerabilities no contiene un número válido. Valor recibido: '$vulnerabilities'"
+          
+          # Guardamos componentKeys en una variable
+          COMPONENT_KEY="GLemos-AS_laboratorio-final-glemos2"
+          
+          # Realizamos la consulta para obtener las vulnerabilidades CRITICAL
+          response_critical=$(curl -s "https://sonarcloud.io/api/issues/search?componentKeys=$COMPONENT_KEY&types=VULNERABILITY&severities=CRITICAL")
+          critical_vulnerabilities=$(echo "$response_critical" | jq -r '.total // 0')
+
+          # Realizamos la consulta para obtener las vulnerabilidades HIGH (altas)
+          response_high=$(curl -s "https://sonarcloud.io/api/issues/search?componentKeys=$COMPONENT_KEY&types=VULNERABILITY&severities=HIGH")
+          high_vulnerabilities=$(echo "$response_high" | jq -r '.total // 0')
+
+          # Realizamos la consulta para obtener las vulnerabilidades MAJOR (medias)
+          response_major=$(curl -s "https://sonarcloud.io/api/issues/search?componentKeys=$COMPONENT_KEY&types=VULNERABILITY&severities=MAJOR")
+          major_vulnerabilities=$(echo "$response_major" | jq -r '.total // 0')
+
+          # Verificar si las variables contienen números válidos
+          if [[ ! "$critical_vulnerabilities" =~ ^[0-9]+$ ]] || [[ ! "$high_vulnerabilities" =~ ^[0-9]+$ ]] || [[ ! "$major_vulnerabilities" =~ ^[0-9]+$ ]]; then
+            echo "Al menos una de las variables no contiene un número válido. Valor crítico: '$critical_vulnerabilities', Valor alto: '$high_vulnerabilities', Valor medio: '$major_vulnerabilities'"
             exit 1
           fi
-          echo "Valor de variable: $vulnerabilities"
 
-          # Verificar si se encontraron vulnerabilidades
-          if [ "$vulnerabilities" -gt 0 ]; then
-            echo "Se encontraron $vulnerabilities vulnerabilidades críticas, altas o medias. Deteniendo pipeline."
-          # Descomenta para detener el pipeline
-          exit 1
+          # Mostrar el número de vulnerabilidades de cada tipo
+          echo "Vulnerabilidades críticas: $critical_vulnerabilities"
+          echo "Vulnerabilidades altas: $high_vulnerabilities"
+          echo "Vulnerabilidades medias: $major_vulnerabilities"
+
+          # Verificar si se encontraron vulnerabilidades de cualquier tipo
+          if [ "$critical_vulnerabilities" -gt 0 ] || [ "$high_vulnerabilities" -gt 0 ] || [ "$major_vulnerabilities" -gt 0 ]; then
+            echo "Se encontraron vulnerabilidades críticas, altas o medias. Deteniendo pipeline."
+
+            # Detener el pipeline si se encuentran vulnerabilidades de cualquier tipo
+            exit 1
           else
             echo "No se encontraron vulnerabilidades críticas, altas o medias."
           fi

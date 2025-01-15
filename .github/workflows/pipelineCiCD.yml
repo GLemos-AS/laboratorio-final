@@ -196,25 +196,42 @@ jobs:
         with:
           image-ref: ${{ secrets.DOCKER_USERNAME }}/laboratorio_final_glemos:latest
           format: json
-          output: trivy-scan-report.json
-          args: --skip-files /root/.npm/_cacache/content-v2/
+          output: trivyreport.json
+          args: --skip-dirs .cache
 
-      - name: Verificar salida de Trivy
-        run: cat trivy-scan-report.json
-
+      - name: Verificar archivo generado
+        run: |
+          if [ ! -f trivyreport.json ]; then
+            echo "El archivo trivyreport.json no se generó."
+            exit 1
+          fi
+          echo "Archivo JSON generado correctamente:"
+          cat trivyreport.json
+      
+      - name: Inspeccionar estructura JSON
+        run: |
+          echo "Mostrando estructura del archivo JSON generado por Trivy:"
+          jq '.' trivyreport.json
+      
       - name: Validar contenido del reporte
         run: |
-          if ! jq -e '.Results | length > 0' trivy-scan-report.json > /dev/null; then
+          if ! jq -e '.Results | length > 0' trivyreport.json > /dev/null; then
+            echo "No se encontraron vulnerabilidades en la imagen."
+            exit 0
+          fi
+      - name: Validar contenido del reporte
+        run: |
+          if ! jq -e '.Results | length > 0' trivyreport.json > /dev/null; then
             echo "No se encontraron vulnerabilidades. Pipeline aprobado."
             exit 0
           fi
 
       - name: Analizar vulnerabilidades
         run: |
-          CRITICAL=$(jq '[.Results[].Vulnerabilities[] | select(.Severity == "CRITICAL")] | length' trivy-scan-report.json)
-          HIGH=$(jq '[.Results[].Vulnerabilities[] | select(.Severity == "HIGH")] | length' trivy-scan-report.json)
-          MEDIUM=$(jq '[.Results[].Vulnerabilities[] | select(.Severity == "MEDIUM")] | length' trivy-scan-report.json)
-          LOW=$(jq '[.Results[].Vulnerabilities[] | select(.Severity == "LOW")] | length' trivy-scan-report.json)
+          CRITICAL=$(jq '[.Results[].Vulnerabilities[] | select(.Severity == "CRITICAL")] | length' trivyreport.json)
+          HIGH=$(jq '[.Results[].Vulnerabilities[] | select(.Severity == "HIGH")] | length' trivyreport.json)
+          MEDIUM=$(jq '[.Results[].Vulnerabilities[] | select(.Severity == "MEDIUM")] | length' trivyreport.json)
+          LOW=$(jq '[.Results[].Vulnerabilities[] | select(.Severity == "LOW")] | length' trivyreport.json)
           TOTAL=$((CRITICAL + HIGH + MEDIUM + LOW))
           
           echo "Resumen de vulnerabilidades:"
@@ -232,5 +249,5 @@ jobs:
       - name: Subir reporte de Trivy como artefacto
         uses: actions/upload-artifact@v3
         with:
-          name: trivy-scan-report
-          path: trivy-scan-report.json
+          name: trivyreport
+          path: trivyreport.json

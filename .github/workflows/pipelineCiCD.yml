@@ -299,16 +299,14 @@ jobs:
         - name: Pull Docker Image
           run: docker pull $IMAGE_NAME:latest
 
-        - name: Detener y eliminar servicios actuales
-          run: docker rm -f $CONTAINER_NAME || true
-
-        - name: Desplegar Contenedor con Docker Run
+        - name: Ejecutar npm install en el contenedor
           run: |
-            docker run --name $CONTAINER_NAME \
-              -p 3000:3000 \
-              -e NODE_ENV=development \
-              -v $PWD:/reddit-clone \
-              -d $IMAGE_NAME:latest
+            docker run --rm --name $CONTAINER_NAME -v $(pwd):/reddit-clone -w /reddit-clone $IMAGE_NAME:latest sh -c "npm install"
+        
+        - name: Ejecutar la app
+          run: |
+            docker run --rm --name $CONTAINER_NAME -v $(pwd):/reddit-clone -w /reddit-clone -p 3000:3000 $IMAGE_NAME:latest sh -c "npm run dev"
+
 
         - name: Verificar el despliegue
           run: |

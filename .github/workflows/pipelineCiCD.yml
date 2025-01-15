@@ -278,13 +278,13 @@ jobs:
         with:
           name: trivyreport
           path: trivyreport.json
-          
+
   Deploy:
       needs: DockerScan
       name: Desplegar Contenedor Docker
       runs-on: ubuntu-24.04
       env:
-        IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}/laboratorio_final_glemos2
+        IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}/laboratorio_final_glemos
         CONTAINER_NAME: laboratorio_glemos
       steps:
         - name: Docker Login

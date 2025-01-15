@@ -198,6 +198,23 @@ jobs:
           format: json
           output: trivyreport.json
           args: --skip-dirs .cache
+      
+      - name: Ver estructura básica del JSON
+        run: |
+          echo "=== Primeras 20 líneas del archivo ==="
+          head -n 20 trivyreport.json
+            
+          echo -e "\n=== Estructura general del JSON ==="
+          jq 'keys' trivyreport.json
+            
+          echo -e "\n=== Estructura de Results ==="
+          jq '.Results | map(keys)' trivyreport.json
+            
+          echo -e "\n=== Número total de resultados ==="
+          jq '.Results | length' trivyreport.json
+            
+          echo -e "\n=== Tipos de vulnerabilidades encontradas ==="
+          jq '.Results[].Vulnerabilities[]? | .Severity' trivyreport.json | sort | uniq -c || echo "No se encontraron vulnerabilidades"  
 
       - name: Verificar archivo generado
         run: |
@@ -228,10 +245,26 @@ jobs:
 
       - name: Analizar vulnerabilidades
         run: |
-          CRITICAL=$(jq '[.Results[].Vulnerabilities[] | select(.Severity == "CRITICAL")] | length' trivyreport.json)
-          HIGH=$(jq '[.Results[].Vulnerabilities[] | select(.Severity == "HIGH")] | length' trivyreport.json)
-          MEDIUM=$(jq '[.Results[].Vulnerabilities[] | select(.Severity == "MEDIUM")] | length' trivyreport.json)
-          LOW=$(jq '[.Results[].Vulnerabilities[] | select(.Severity == "LOW")] | length' trivyreport.json)
+          # Primero verificamos si hay resultados
+          if ! jq -e '.Results' trivyreport.json > /dev/null; then
+            echo "No se encontraron resultados en el escaneo"
+            exit 0
+          fi
+
+          # Inicializamos contadores
+          CRITICAL=0
+          HIGH=0
+          MEDIUM=0
+          LOW=0
+
+          # Contamos vulnerabilidades solo si existen
+          if jq -e '.Results[].Vulnerabilities' trivyreport.json > /dev/null; then
+            CRITICAL=$(jq '[.Results[].Vulnerabilities[]? | select(.Severity == "CRITICAL")] | length' trivyreport.json)
+            HIGH=$(jq '[.Results[].Vulnerabilities[]? | select(.Severity == "HIGH")] | length' trivyreport.json)
+            MEDIUM=$(jq '[.Results[].Vulnerabilities[]? | select(.Severity == "MEDIUM")] | length' trivyreport.json)
+            LOW=$(jq '[.Results[].Vulnerabilities[]? | select(.Severity == "LOW")] | length' trivyreport.json)
+          fi
+          
           TOTAL=$((CRITICAL + HIGH + MEDIUM + LOW))
           
           echo "Resumen de vulnerabilidades:"

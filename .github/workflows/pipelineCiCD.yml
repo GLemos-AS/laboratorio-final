@@ -155,7 +155,7 @@ jobs:
   DockerBuild:
     # needs: SCA
     name: Build Docker Image
-    runs-on: [self-hosted, windows]
+    runs-on: ubuntu-24.04
     env:
       IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}/laboratorio_final_glemos
     steps:
@@ -181,7 +181,7 @@ jobs:
   DockerScan:
     needs: DockerBuild
     name: Scan Docker Image
-    runs-on: [self-hosted, windows]
+    runs-on: ubuntu-24.04
     env:
       IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}/laboratorio_final_glemos
     steps:
@@ -282,7 +282,7 @@ jobs:
   Deploy:
       needs: DockerScan
       name: Desplegar Contenedor Docker
-      runs-on: [self-hosted, windows]
+      runs-on: ubuntu-24.04
       env:
         IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}/laboratorio_final_glemos
         CONTAINER_NAME: laboratorio_glemos

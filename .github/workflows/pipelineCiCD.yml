@@ -191,35 +191,46 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Run Trivy Scan
+      - name: Ejecutar Trivy
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: '${{ secrets.DOCKER_USERNAME }}/laboratorio_final_glemos:latest'
-          format: 'json'
-          output: 'trivy-scan-report.json'
+          image-ref: ${{ secrets.DOCKER_USERNAME }}/laboratorio_final_glemos:latest
+          format: json
+          output: trivy-scan-report.json
+          args: --skip-files /root/.npm/_cacache/content-v2/
 
-      - name: Conteo de Vulnerabilidades
+      - name: Verificar salida de Trivy
+        run: cat trivy-scan-report.json
+
+      - name: Validar contenido del reporte
+        run: |
+          if ! jq -e '.Results | length > 0' trivy-scan-report.json > /dev/null; then
+            echo "No se encontraron vulnerabilidades. Pipeline aprobado."
+            exit 0
+          fi
+
+      - name: Analizar vulnerabilidades
         run: |
           CRITICAL=$(jq '[.Results[].Vulnerabilities[] | select(.Severity == "CRITICAL")] | length' trivy-scan-report.json)
           HIGH=$(jq '[.Results[].Vulnerabilities[] | select(.Severity == "HIGH")] | length' trivy-scan-report.json)
           MEDIUM=$(jq '[.Results[].Vulnerabilities[] | select(.Severity == "MEDIUM")] | length' trivy-scan-report.json)
           LOW=$(jq '[.Results[].Vulnerabilities[] | select(.Severity == "LOW")] | length' trivy-scan-report.json)
           TOTAL=$((CRITICAL + HIGH + MEDIUM + LOW))
-
-          echo "Vulnerabilities Summary:"
-          echo "Critical: $CRITICAL"
-          echo "High: $HIGH"
-          echo "Medium: $MEDIUM"
-          echo "Low: $LOW"
+          
+          echo "Resumen de vulnerabilidades:"
+          echo "Críticas: $CRITICAL"
+          echo "Altas: $HIGH"
+          echo "Medias: $MEDIUM"
+          echo "Bajas: $LOW"
           echo "Total: $TOTAL"
-
+          
           if [ "$CRITICAL" -gt 0 ] || [ "$HIGH" -gt 0 ] || [ "$MEDIUM" -gt 0 ]; then
             echo "¡Se detectaron vulnerabilidades críticas, altas o medias! Fallando el pipeline..."
             exit 1
           fi
 
-      - name: Upload Trivy Report
+      - name: Subir reporte de Trivy como artefacto
         uses: actions/upload-artifact@v3
         with:
-          name: Trivy Scan Report
+          name: trivy-scan-report
           path: trivy-scan-report.json

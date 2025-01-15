@@ -191,10 +191,12 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Escaneo de Docker Image con Trivy
-        run: |
-          trivy image $IMAGE_NAME:latest --format json --output trivy-scan-report.json \
-          --severity CRITICAL,HIGH,MEDIUM,LOW || true
+      - name: Run Trivy Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: '${{ secrets.DOCKER_USERNAME }}/laboratorio_final_glemos:latest'
+          format: 'json'
+          output: 'trivy-scan-report.json'
 
       - name: Conteo de Vulnerabilidades
         run: |
@@ -212,7 +214,7 @@ jobs:
           echo "Total: $TOTAL"
 
           if [ "$CRITICAL" -gt 0 ] || [ "$HIGH" -gt 0 ] || [ "$MEDIUM" -gt 0 ]; then
-            echo "Critical, High, or Medium vulnerabilities detected! Failing pipeline..."
+            echo "¡Se detectaron vulnerabilidades críticas, altas o medias! Fallando el pipeline..."
             exit 1
           fi
 

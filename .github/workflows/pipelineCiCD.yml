@@ -299,23 +299,16 @@ jobs:
         - name: Pull Docker Image
           run: docker pull $IMAGE_NAME:latest
 
-        - name: Crear docker-compose.override.yml
-          run: |
-            echo 'version: "3.9"
-            services:
-              app:
-                image: $IMAGE_NAME:latest
-                container_name: $CONTAINER_NAME
-                ports:
-                  - "3000:3000"
-                command: sh -c "npm install && npm run dev"
-            ' > docker-compose.override.yml
-
         - name: Detener y eliminar servicios actuales
-          run: docker compose down || true
+          run: docker rm -f $CONTAINER_NAME || true
 
-        - name: Desplegar con Docker Compose
-          run: docker compose up -d
+        - name: Desplegar Contenedor con Docker Run
+          run: |
+            docker run --name $CONTAINER_NAME \
+              -p 3000:3000 \
+              -e NODE_ENV=development \
+              -v $PWD:/reddit-clone \
+              -d $IMAGE_NAME:latest
 
         - name: Verificar el despliegue
           run: |

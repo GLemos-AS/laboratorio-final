@@ -299,13 +299,16 @@ jobs:
         - name: Pull Docker Image
           run: docker pull $IMAGE_NAME:latest
 
-        - name: Ejecutar npm install en el contenedor
+        - name: Iniciar contenedor Docker
           run: |
-            docker run --rm --name $CONTAINER_NAME -v $(pwd):/reddit-clone -w /reddit-clone $IMAGE_NAME:latest sh -c "npm install"
-        
-        - name: Ejecutar la app
+            echo "Iniciando contenedor Docker..."
+            docker run -d --name $CONTAINER_NAME -p 3000:3000 $IMAGE_NAME:latest
+            echo "Contenedor iniciado con éxito."
+
+        - name: Verificar contenedor
           run: |
-            docker run --rm --name $CONTAINER_NAME -v $(pwd):/reddit-clone -w /reddit-clone -p 3000:3000 $IMAGE_NAME:latest sh -c "npm run dev"
+            echo "Verificando que el contenedor esté corriendo..."
+            docker ps | grep $CONTAINER_NAME || (echo "El contenedor no está corriendo" && exit 1)
 
 
         - name: Verificar el despliegue
@@ -320,3 +323,14 @@ jobs:
               docker logs $CONTAINER_NAME
               exit 1
             fi
+        - name: Mostrar curl de sitio
+          run: |
+            echo "Inicio de web"
+            curl  http://localhost:3000
+            echo "Fin de web"
+
+        - name: Detener y eliminar el contenedor
+          run: |
+            echo "Deteniendo y eliminando el contenedor..."
+            docker stop $CONTAINER_NAME
+            docker rm $CONTAINER_NAME

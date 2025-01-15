@@ -287,6 +287,9 @@ jobs:
         IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}/laboratorio_final_glemos
         CONTAINER_NAME: laboratorio_glemos
       steps:
+        - name: Checkout del código
+          uses: actions/checkout@v3
+
         - name: Docker Login
           uses: docker/login-action@v3.0.0
           with:
@@ -296,29 +299,24 @@ jobs:
         - name: Pull Docker Image
           run: docker pull $IMAGE_NAME:latest
 
-        - name: Detener y eliminar contenedor existente
+        - name: Crear docker-compose.override.yml
           run: |
-            if docker stop $CONTAINER_NAME; then
-              echo "Contenedor detenido correctamente."
-            else
-              echo "No se pudo detener el contenedor, podría no estar ejecutándose."
-            fi
-            if docker rm $CONTAINER_NAME; then
-              echo "Contenedor eliminado correctamente."
-            else
-              echo "No se pudo eliminar el contenedor, podría no existir."
-            fi
-          continue-on-error: true
+            echo 'version: "3.9"
+            services:
+              app:
+                image: $IMAGE_NAME:latest
+                container_name: $CONTAINER_NAME
+                ports:
+                  - "3000:3000"
+            ' > docker-compose.override.yml
 
-        - name: Desplegar Contenedor
-          run: |
-            docker run -d \
-              --restart=always \
-              -p 3000:3000 \
-              --name $CONTAINER_NAME \
-              $IMAGE_NAME:latest
+        - name: Detener y eliminar servicios actuales
+          run: docker-compose down || true
 
-        - name: Chequeo de Estado de Contenedor
+        - name: Desplegar con Docker Compose
+          run: docker-compose up -d
+
+        - name: Verificar el despliegue
           run: |
             sleep 10
             if [ "$(docker ps -q -f name=$CONTAINER_NAME)" ]; then

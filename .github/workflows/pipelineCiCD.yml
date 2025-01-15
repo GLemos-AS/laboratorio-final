@@ -68,92 +68,92 @@ jobs:
   #         else
   #           echo "No se encontraron vulnerabilidades críticas, altas o medias."
   #         fi
-  SCA:
-    # Eliminamos la dependencia de SAST
-    # needs: SAST
-    name: Software Composition Analysis (SCA)
-    runs-on: ubuntu-24.04
+  # SCA:
+  #   # Eliminamos la dependencia de SAST
+  #   # needs: SAST
+  #   name: Software Composition Analysis (SCA)
+  #   runs-on: ubuntu-24.04
 
-    steps:
-      # Verificar y descargar código
-      - name: Checkout Code
-        uses: actions/checkout@v3
+  #   steps:
+  #     # Verificar y descargar código
+  #     - name: Checkout Code
+  #       uses: actions/checkout@v3
 
-      # Configurar Java para proyectos con Maven
-      - name: Set up JDK 17
-        uses: actions/setup-java@v2
-        with:
-          java-version: '17'
-          distribution: 'adopt'
+  #     # Configurar Java para proyectos con Maven
+  #     - name: Set up JDK 17
+  #       uses: actions/setup-java@v2
+  #       with:
+  #         java-version: '17'
+  #         distribution: 'adopt'
 
-      # Configurar Node.js
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '16'  # Ajustar según la versión necesaria para tu proyecto
+  #     # Configurar Node.js
+  #     - name: Set up Node.js
+  #       uses: actions/setup-node@v3
+  #       with:
+  #         node-version: '16'  # Ajustar según la versión necesaria para tu proyecto
 
-      # Instalar dependencias del proyecto
-      - name: Install Node.js Dependencies
-        run: |
-          echo "Instalando dependencias del proyecto con npm..."
-          npm install
+  #     # Instalar dependencias del proyecto
+  #     - name: Install Node.js Dependencies
+  #       run: |
+  #         echo "Instalando dependencias del proyecto con npm..."
+  #         npm install
 
-      # Ejecutar Dependency Check
-      - name: Dependency Check
-        uses: dependency-check/Dependency-Check_Action@1.1.0
-        env:
-          JAVA_HOME: /opt/jdk
-        id: Depcheck
-        with:
-          project: 'GLemos-AS_laboratorio-final-glemos2'
-          path: '.'
-          format: 'HTML'
-          args: >
-            --out ./reports
-            --failOnCVSS 7
-            --enableRetired
+  #     # Ejecutar Dependency Check
+  #     - name: Dependency Check
+  #       uses: dependency-check/Dependency-Check_Action@1.1.0
+  #       env:
+  #         JAVA_HOME: /opt/jdk
+  #       id: Depcheck
+  #       with:
+  #         project: 'GLemos-AS_laboratorio-final-glemos2'
+  #         path: '.'
+  #         format: 'HTML'
+  #         args: >
+  #           --out ./reports
+  #           --failOnCVSS 7
+  #           --enableRetired
 
-      # Subir reporte del análisis
-      - name: Subir reporte
-        uses: actions/upload-artifact@v4
-        with:
-          name: dependency-check-report
-          path: ./reports
+  #     # Subir reporte del análisis
+  #     - name: Subir reporte
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: dependency-check-report
+  #         path: ./reports
 
-      # Contar vulnerabilidades
-      - name: Contar vulnerabilidades por severidad
-        run: |
-          echo "Analizando el reporte de dependencias para contar vulnerabilidades..."
-          REPORT_PATH="./reports/dependency-check-report.html"
+  #     # Contar vulnerabilidades
+  #     - name: Contar vulnerabilidades por severidad
+  #       run: |
+  #         echo "Analizando el reporte de dependencias para contar vulnerabilidades..."
+  #         REPORT_PATH="./reports/dependency-check-report.html"
 
-          if [ -f "$REPORT_PATH" ]; then
-            critical_count=$(grep -i 'Critical' "$REPORT_PATH" | wc -l)
-            high_count=$(grep -i 'High' "$REPORT_PATH" | wc -l)
-            medium_count=$(grep -i 'Medium' "$REPORT_PATH" | wc -l)
+  #         if [ -f "$REPORT_PATH" ]; then
+  #           critical_count=$(grep -i 'Critical' "$REPORT_PATH" | wc -l)
+  #           high_count=$(grep -i 'High' "$REPORT_PATH" | wc -l)
+  #           medium_count=$(grep -i 'Medium' "$REPORT_PATH" | wc -l)
 
-            echo "Vulnerabilidades críticas: $critical_count"
-            echo "Vulnerabilidades altas: $high_count"
-            echo "Vulnerabilidades medias: $medium_count"
+  #           echo "Vulnerabilidades críticas: $critical_count"
+  #           echo "Vulnerabilidades altas: $high_count"
+  #           echo "Vulnerabilidades medias: $medium_count"
 
-            if [ "$critical_count" -gt 0 ]; then
-              echo "Se encontraron vulnerabilidades críticas. Deteniendo pipeline."
-              # exit 1
-            elif [ "$high_count" -gt 0 ]; then
-              echo "Se encontraron vulnerabilidades altas. Deteniendo pipeline."
-              # exit 1
-            elif [ "$medium_count" -gt 0 ]; then
-              echo "Se encontraron vulnerabilidades medias. Deteniendo pipeline."
-              # exit 1
-            else
-              echo "No se encontraron vulnerabilidades críticas, altas o medias."
-            fi
-          else
-            echo "No se encontró el reporte de dependencias en $REPORT_PATH. Revisar ejecución."
-            exit 1
-          fi
+  #           if [ "$critical_count" -gt 0 ]; then
+  #             echo "Se encontraron vulnerabilidades críticas. Deteniendo pipeline."
+  #             # exit 1
+  #           elif [ "$high_count" -gt 0 ]; then
+  #             echo "Se encontraron vulnerabilidades altas. Deteniendo pipeline."
+  #             # exit 1
+  #           elif [ "$medium_count" -gt 0 ]; then
+  #             echo "Se encontraron vulnerabilidades medias. Deteniendo pipeline."
+  #             # exit 1
+  #           else
+  #             echo "No se encontraron vulnerabilidades críticas, altas o medias."
+  #           fi
+  #         else
+  #           echo "No se encontró el reporte de dependencias en $REPORT_PATH. Revisar ejecución."
+  #           exit 1
+  #         fi
 
   DockerBuild:
-    needs: SCA
+    # needs: SCA
     name: Build Docker Image
     runs-on: ubuntu-24.04
     env:

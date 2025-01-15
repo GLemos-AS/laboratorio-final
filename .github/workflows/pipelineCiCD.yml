@@ -311,10 +311,10 @@ jobs:
             ' > docker-compose.override.yml
 
         - name: Detener y eliminar servicios actuales
-          run: docker-compose down || true
+          run: docker compose down || true
 
         - name: Desplegar con Docker Compose
-          run: docker-compose up -d
+          run: docker compose up -d
 
         - name: Verificar el despliegue
           run: |

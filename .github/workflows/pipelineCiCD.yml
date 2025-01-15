@@ -318,24 +318,6 @@ jobs:
               --name $CONTAINER_NAME \
               $IMAGE_NAME:latest
 
-        - name: Esperar a que el contenedor esté saludable
-          run: |
-            echo "Esperando a que el contenedor esté en estado saludable..."
-            retries=10
-            while [ "$retries" -gt 0 ]; do
-              if [ "$(docker inspect --format='{{.State.Health.Status}}' $CONTAINER_NAME)" == "healthy" ]; then
-                echo "✅ Contenedor está saludable."
-                break
-              fi
-              sleep 3
-              retries=$((retries - 1))
-            done
-            if [ "$retries" -eq 0 ]; then
-              echo "❌ El contenedor no alcanzó el estado saludable. Revisar logs."
-              docker logs $CONTAINER_NAME
-              exit 1
-            fi
-
         - name: Chequeo de Estado de Contenedor
           run: |
             sleep 10

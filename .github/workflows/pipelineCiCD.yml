@@ -308,6 +308,7 @@ jobs:
                 container_name: $CONTAINER_NAME
                 ports:
                   - "3000:3000"
+                command: sh -c "npm install && npm run dev"
             ' > docker-compose.override.yml
 
         - name: Detener y eliminar servicios actuales
